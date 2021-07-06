@@ -1,0 +1,75 @@
+server:
+  port: 8096
+spring:
+  application:
+    name: lane-service-autodeliver
+  zipkin:
+    base-url: http://127.0.0.1:9411 # zipkin server的请求地址
+    sender:
+      # web 客户端将踪迹日志数据通过网络请求的方式传送到服务端，另外还有配置
+      # kafka/rabbit 客户端将踪迹日志数据传递到mq进行中转
+      type: web
+  sleuth:
+    sampler:
+      # 采样率 1 代表100%全部采集 ，默认0.1 代表10% 的请求踪迹数据会被采集
+      # 生产环境下，请求量非常大，没有必要所有请求的踪迹数据都采集分析，对于网络包括server端压力都是比较大的，可以配置采样率采集一定比例的请求的踪迹数据进行分析即可
+      probability: 1
+#注册到Eureka服务中心
+eureka:
+  client:
+    service-url:
+      # 注册到集群，就把多个Eurekaserver地址使用逗号连接起来即可；注册到单实例（非集群模式），那就写一个就ok
+      defaultZone: http://www.abc.com:8761/eureka,http://www.def.com:8762/eureka
+  instance:
+    prefer-ip-address: true  #服务实例中显示ip，而不是显示主机名（兼容老的eureka版本）
+    # 实例名称： 192.168.18.111:lane-service-resume:8080，我们可以自定义它便于升级管理
+    instance-id: ${spring.cloud.client.ip-address}:${spring.application.name}:${server.port}:@project.version@
+  #针对被调用方微服务名称,不加就是全局生效
+  lane-service-resume:
+    ribbon:
+      NFLoadBalancerRuleClassName: com.netflix.loadbalancer.RoundRobinRule #负载策略调整为轮询
+# springboot中暴露健康检查等断点接口
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  # 暴露健康接口的细节
+  endpoint:
+    health:
+      show-details: always
+#针对的被调用方微服务名称,不加就是全局生效
+lane-service-resume:
+  ribbon:
+    #请求连接超时时间
+    ConnectTimeout: 20000
+    #请求处理超时时间
+    ##########################################Feign超时时长设置
+    ReadTimeout: 30000
+    #对所有操作都进行重试
+    OkToRetryOnAllOperations: true
+    ####根据如上配置，当访问到故障请求的时候，它会再尝试访问一次当前实例（次数由MaxAutoRetries配置），
+    ####如果不行，就换一个实例进行访问，如果还不行，再换一次实例访问（更换次数由MaxAutoRetriesNextServer配置），
+    ####如果依然不行，返回失败信息。
+    MaxAutoRetries: 0 #对当前选中实例重试次数，不包括第一次调用
+    MaxAutoRetriesNextServer: 0 #切换实例的重试次数
+    NFLoadBalancerRuleClassName: com.netflix.loadbalancer.RoundRobinRule #负载策略调整
+logging:
+  level:
+    # Feign日志只会对日志级别为debug的做出响应
+    com.galaxy.service.ResumeServiceFeignClient: debug
+    #分布式链路追踪
+    org.springframework.web.servlet.DispatcherServlet: debug
+    org.springframework.cloud.sleuth: debug
+# 开启Feign的熔断功能
+feign:
+  hystrix:
+    enabled: true
+hystrix:
+  command:
+    default:
+      execution:
+        isolation:
+          thread:
+            ##########################################Hystrix的超时时长设置
+            timeoutInMilliseconds: 60000

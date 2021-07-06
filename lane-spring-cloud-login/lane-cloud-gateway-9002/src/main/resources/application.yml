@@ -1,0 +1,76 @@
+server:
+  port: 9002
+spring:
+  application:
+  name: lane-cloud-gateway
+  cloud:
+    gateway:
+      routes:
+        - id: lane-cloud-service-user
+          uri: lb://lane-cloud-service-user
+          predicates:
+            - Path=/api/user/**
+          filters:
+            - StripPrefix=1
+        - id: lane-cloud-service-code
+          uri: lb://lane-cloud-service-code
+          predicates:
+            - Path=/api/code/**
+          filters:
+            - StripPrefix=1
+        - id: lane-cloud-service-email
+          uri: lb://lane-cloud-service-email
+          predicates:
+            - Path=/api/email/**
+          filters:
+            - StripPrefix=1
+    nacos:
+      discovery:
+        server-addr: 127.0.0.1:8848,127.0.0.1:8849,127.0.0.1:8850
+      # nacos config 配置
+      config:
+        server-addr: 127.0.0.1:8848,127.0.0.1:8849,127.0.0.1:8850
+        # 锁定server端的配置文件（读取它的配置项）
+        namespace: ba4f6d66-3a09-4a1f-a602-f71ab862b517  # 命名空间id
+        group: DEFAULT_GROUP  # 默认分组就是DEFAULT_GROUP，如果使用默认分组可以不配置
+        file-extension: yaml   #默认properties
+        # 根据规则拼接出来的dataId效果：lane-service-resume.yaml
+        ext-config[0]:
+          data-id: lane-service-email-dev.yaml
+          group: DEFAULT_GROUP
+          refresh: true  #开启扩展dataId的动态刷新
+        ext-config[1]:
+          data-id: lane-service-code-dev.yaml
+          group: DEFAULT_GROUP
+          refresh: true  #开启扩展dataId的动态刷新
+    sentinel:
+      transport:
+        dashboard: 127.0.0.1:8080 # sentinel dashboard/console 地址
+        port: 8719   #  sentinel会在该端口启动http server，那么这样的话，控制台定义的一些限流等规则才能发送传递过来，
+        #如果8719端口被占用，那么会依次+1
+        # Sentinel Nacos数据源配置，Nacos中的规则会自动同步到sentinel流控规则中
+      datasource:
+        # 自定义的流控规则数据源名称
+        flow:
+          nacos:
+            server-addr: ${spring.cloud.nacos.discovery.server-addr}
+            data-id: ${spring.application.name}-flow-rules
+            groupId: DEFAULT_GROUP
+            data-type: json
+            rule-type: flow  # 类型来自RuleType类
+        # 自定义的降级规则数据源名称
+        degrade:
+          nacos:
+            server-addr: ${spring.cloud.nacos.discovery.server-addr}
+            data-id: ${spring.application.name}-degrade-rules
+            groupId: DEFAULT_GROUP
+            data-type: json
+            rule-type: degrade  # 类型来自RuleType类
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  endpoint:
+    health:
+      show-details: always

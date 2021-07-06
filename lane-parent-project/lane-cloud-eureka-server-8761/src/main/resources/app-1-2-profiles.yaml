@@ -1,0 +1,40 @@
+#通过配置一个配置文件启动两个服务，需要在分别在启动时候配置active profiles的名称
+#指定应⽤名称
+spring:
+  application:
+    name: lane-cloud-eureka-server
+---
+#第⼀个profile,后期启动spring-boot项⽬时，可通过命令参数指定
+spring:
+  profiles: www.abc.com
+server:
+  port: 8761
+eureka:
+  instance:
+    hostname: www.abc.com  # 当前eureka实例的主机名
+    client:
+      service-url:
+        # 配置客户端所交互的Eureka Server的地址（Eureka Server集群中每一个Server其实相对于其它Server来说都是Client）
+        # 集群模式下，defaultZone应该指向其它Eureka Server，如果有更多其它Server实例，逗号拼接即可
+        defaultZone: http://www.def.com:8762/eureka
+        #defaultZone: http://localhost:8761/eureka
+      register-with-eureka: true  # 集群模式下可以改成true,当前自己就是server不需要注册自己false
+      fetch-registry: true # 集群模式下可以改成true，单机不需要从服务获取注册信息false
+
+---
+#第⼆个profile,后期启动spring-boot项⽬时，可通过命令参数指定
+spring:
+  profiles: www.def.com
+server:
+  port: 8762
+eureka:
+  instance:
+    hostname: www.def.com  # 当前eureka实例的主机名
+    client:
+      service-url:
+        # 配置客户端所交互的Eureka Server的地址（Eureka Server集群中每一个Server其实相对于其它Server来说都是Client）
+        # 集群模式下，defaultZone应该指向其它Eureka Server，如果有更多其它Server实例，逗号拼接即可
+        defaultZone: http://www.abc.com:8761/eureka
+        #defaultZone: http://localhost:8761/eureka
+      register-with-eureka: true  # 集群模式下可以改成true,当前自己就是server不需要注册自己false
+      fetch-registry: true # 集群模式下可以改成true，单机不需要从服务获取注册信息false
